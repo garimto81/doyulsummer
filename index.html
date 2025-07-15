@@ -6,8 +6,8 @@
     <title>도율이 여름방학 일정</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chosen Palette: Calm Neutrals -->
-    <!-- Application Structure Plan: The application is designed as an interactive single-page dashboard. The core is a dynamic calendar allowing users to see the entire vacation period at a glance, with color-coding for different types of days. Clicking a date updates a "Daily Detail" panel, showing a chronological timeline and critical action items for that specific day. The "Weekly Forecast" section now shows the next 7 *scheduled* days, not just the next 7 chronological days, to provide a more focused, actionable view for the user. The top "Key Info" section is redesigned to make the times the most prominent visual element and dynamically calculates and highlights the next upcoming key event with a "D-Day" counter. A current date display has also been added. -->
-    <!-- Visualization & Content Choices: Instead of traditional charts, the primary visualization is an interactive calendar grid (HTML/CSS/JS) and a dynamic daily timeline (HTML/JS). Report Info: Entire schedule -> Goal: Organize/Inform -> Viz: Interactive Calendar -> Interaction: Click to see daily details -> Justification: Best for time-based data exploration. Report Info: Critical tasks (pickup/arrival times) -> Goal: Alert/Summarize -> Viz: Prominent summary boxes with large typography for times and a dynamic "D-Day" badge -> Interaction: Static display, dynamically updated on load -> Justification: Emphasizes the most critical data points (times) and provides a clear countdown to the next important action. Report Info: Overlapping schedules -> Goal: Clarify -> Viz: Resolved into a single chronological timeline for each day -> Interaction: Displayed upon day selection -> Justification: Simplifies complex overlapping rules into a clear, easy-to-understand daily plan. -->
+    <!-- Application Structure Plan: The application is designed as an interactive single-page dashboard. The core is a dynamic calendar allowing users to see the entire vacation period at a glance, with color-coding for different types of days. Clicking a date updates a "Daily Detail" panel, showing a chronological timeline and critical action items for that specific day. The "Weekly Forecast" section now shows the next 7 *scheduled* days, not just the next 7 chronological days, to provide a more focused, actionable view for the user. The top "Key Info" section is redesigned to make the times the most prominent visual element and dynamically reorders itself to place the next upcoming event first, with a "D-Day" counter. A current date display has also been added. -->
+    <!-- Visualization & Content Choices: Instead of traditional charts, the primary visualization is an interactive calendar grid (HTML/CSS/JS) and a dynamic daily timeline (HTML/JS). Report Info: Entire schedule -> Goal: Organize/Inform -> Viz: Interactive Calendar -> Interaction: Click to see daily details -> Justification: Best for time-based data exploration. Report Info: Critical tasks (pickup/arrival times) -> Goal: Alert/Summarize -> Viz: Prominent summary boxes with large typography for times and a dynamic "D-Day" badge, now reordered for prominence -> Interaction: Static display, dynamically updated and reordered on load -> Justification: Emphasizes the most critical data points (times) and provides a clear countdown to the next important action, placing it first for immediate attention. Report Info: Overlapping schedules -> Goal: Clarify -> Viz: Resolved into a single chronological timeline for each day -> Interaction: Displayed upon day selection -> Justification: Simplifies complex overlapping rules into a clear, easy-to-understand daily plan. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
@@ -70,7 +70,7 @@
         <main class="space-y-8">
             <section id="key-info" class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
                 <h2 class="text-2xl font-bold text-slate-800 mb-4 border-b pb-2">📌 핵심 정보 요약</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                <div id="key-info-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
                     <div id="key-info-pickup" class="bg-rose-100 p-6 rounded-lg flex flex-col justify-center items-center transition-transform duration-300">
                         <p class="text-4xl font-bold text-rose-900">11:20</p>
                         <h3 class="font-semibold text-rose-800 mt-2">학교 직접 픽업</h3>
@@ -230,6 +230,9 @@
                     
                     const nextEventElement = document.getElementById(nextEvent.id);
                     if (nextEventElement) {
+                        const parentContainer = document.getElementById('key-info-grid');
+                        parentContainer.prepend(nextEventElement);
+
                         nextEventElement.classList.add('highlight-next');
                         
                         const dDayBadge = document.createElement('div');
