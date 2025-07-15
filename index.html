@@ -6,7 +6,7 @@
     <title>도율이 여름방학 일정</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chosen Palette: Calm Neutrals -->
-    <!-- Application Structure Plan: The application is designed as an interactive single-page dashboard. The core is a dynamic calendar allowing users to see the entire vacation period at a glance, with color-coding for different types of days. Clicking a date updates a "Daily Detail" panel, showing a chronological timeline and critical action items for that specific day. The "Weekly Forecast" section now shows the next 7 *scheduled* days, not just the next 7 chronological days, to provide a more focused, actionable view for the user. The top "Key Info" section is redesigned to make the times the most prominent visual element and dynamically reorders itself to place the next upcoming event first, with a "D-Day" counter. A current date display has also been added. All weekend schedules are now programmatically removed. Lunch box reminders are now omitted on direct pickup days. Care classes are now added as the default activity. -->
+    <!-- Application Structure Plan: The application is designed as an interactive single-page dashboard. The core is a dynamic calendar allowing users to see the entire vacation period at a glance, with color-coding for different types of days. Clicking a date updates a "Daily Detail" panel, showing a chronological timeline and critical action items for that specific day. The "Weekly Forecast" section now shows the next 7 *scheduled* days, not just the next 7 chronological days, to provide a more focused, actionable view for the user. The top "Key Info" section is redesigned to make the times the most prominent visual element and dynamically reorders itself to place the next upcoming event first, with a "D-Day" counter. It now includes a fourth key event for the 8/4 pickup. A current date display has also been added. All weekend schedules are now programmatically removed. Lunch box reminders are now omitted on direct pickup days. Care classes and complex lunch rules are now added. -->
     <!-- Visualization & Content Choices: Instead of traditional charts, the primary visualization is an interactive calendar grid (HTML/CSS/JS) and a dynamic daily timeline (HTML/JS). Report Info: Entire schedule -> Goal: Organize/Inform -> Viz: Interactive Calendar -> Interaction: Click to see daily details -> Justification: Best for time-based data exploration. Report Info: Critical tasks (pickup/arrival times) -> Goal: Alert/Summarize -> Viz: Prominent summary boxes with large typography for times and a dynamic "D-Day" badge, now reordered for prominence -> Interaction: Static display, dynamically updated and reordered on load -> Justification: Emphasizes the most critical data points (times) and provides a clear countdown to the next important action, placing it first for immediate attention. Report Info: Overlapping schedules -> Goal: Clarify -> Viz: Resolved into a single chronological timeline for each day -> Interaction: Displayed upon day selection -> Justification: Simplifies complex overlapping rules into a clear, easy-to-understand daily plan. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
@@ -70,11 +70,11 @@
         <main class="space-y-8">
             <section id="key-info" class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
                 <h2 class="text-2xl font-bold text-slate-800 mb-4 border-b pb-2">📌 핵심 정보 요약</h2>
-                <div id="key-info-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                <div id="key-info-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
                     <div id="key-info-pickup" class="bg-rose-100 p-6 rounded-lg flex flex-col justify-center items-center transition-transform duration-300">
                         <p class="text-4xl font-bold text-rose-900">11:20</p>
                         <h3 class="font-semibold text-rose-800 mt-2">학교 직접 픽업</h3>
-                        <p class="text-md text-rose-900 mt-1">7/31, 8/1, 8/4</p>
+                        <p class="text-md text-rose-900 mt-1">7/31, 8/1</p>
                     </div>
                     <div id="key-info-arrival1" class="bg-amber-100 p-6 rounded-lg flex flex-col justify-center items-center transition-transform duration-300">
                         <p class="text-4xl font-bold text-amber-900">14:10</p>
@@ -85,6 +85,11 @@
                         <p class="text-4xl font-bold text-sky-900">16:30</p>
                         <h3 class="font-semibold text-sky-800 mt-2">데시앙 도착</h3>
                         <p class="text-md text-sky-900 mt-1">그 외 평일</p>
+                    </div>
+                    <div id="key-info-pickup-aug4" class="bg-teal-100 p-6 rounded-lg flex flex-col justify-center items-center transition-transform duration-300">
+                        <p class="text-4xl font-bold text-teal-900">15:00</p>
+                        <h3 class="font-semibold text-teal-800 mt-2">학교 직접 픽업</h3>
+                        <p class="text-md text-teal-900 mt-1">8/4</p>
                     </div>
                 </div>
             </section>
@@ -147,24 +152,31 @@
 
                     const dateStr = formatDate(new Date(d));
                     scheduleData[dateStr].events.push({ time: '07:40', title: '아빠와 함께 출발' });
-                    scheduleData[dateStr].events.push({ time: '09:00 - 15:30', title: '돌봄 수업' });
+                    scheduleData[dateStr].events.push({ time: '09:00 - 15:30', title: '돌봄 수업 (점심 제공됨)' });
                     scheduleData[dateStr].events.push({ time: '15:30 - 16:30', title: '태권도 (2부)' });
                     scheduleData[dateStr].events.push({ time: '16:30', title: '데시앙 도착' });
                     scheduleData[dateStr].tags.push('has-event');
                 }
 
                 // Layer 2: Override with Supplementary Class (7/28 - 8/8)
+                const careVacationStart = new Date(2025, 6, 28);
+                const careVacationEnd = new Date(2025, 7, 1);
                 for (let d = new Date(2025, 6, 28); d <= new Date(2025, 7, 8); d.setDate(d.getDate() + 1)) {
                     const dayOfWeek = d.getDay();
                     if (dayOfWeek === 0 || dayOfWeek === 6) continue;
 
                     const dateStr = formatDate(new Date(d));
-                    scheduleData[dateStr].events = scheduleData[dateStr].events.filter(e => e.title !== '돌봄 수업');
+                    scheduleData[dateStr].events = scheduleData[dateStr].events.filter(e => e.title.includes('돌봄 수업'));
                     scheduleData[dateStr].events.push({ time: '09:00 - 11:20', title: '초등 보충수업' });
-                    scheduleData[dateStr].events.push({ time: '11:20 - 15:30', title: '돌봄 수업 (점심 해결)' });
-                    scheduleData[dateStr].notes.push({ text: '점심 제공 X (도시락 필요)', type: 'alert' });
-                    if (!scheduleData[dateStr].tags.includes('has-alert')) {
-                        scheduleData[dateStr].tags.push('has-alert');
+                    
+                    if (d >= careVacationStart && d <= careVacationEnd) {
+                        scheduleData[dateStr].events.push({ time: '11:20 - 15:30', title: '돌봄 수업 (점심 해결 필요)' });
+                        scheduleData[dateStr].notes.push({ text: '점심 제공 X (도시락 필요)', type: 'alert' });
+                        if (!scheduleData[dateStr].tags.includes('has-alert')) {
+                            scheduleData[dateStr].tags.push('has-alert');
+                        }
+                    } else { // 8/5 ~ 8/8
+                         scheduleData[dateStr].events.push({ time: '11:20 - 15:30', title: '돌봄 수업 (점심 제공됨)' });
                     }
                 }
 
@@ -174,13 +186,13 @@
                     scheduleData[dateStr].events = scheduleData[dateStr].events.filter(
                         e => e.title === '아빠와 함께 출발' || e.title === '초등 보충수업'
                     );
-                    scheduleData[dateStr].events.push({ time: '11:20 - 13:10', title: '돌봄 수업 (점심 해결)' });
+                    scheduleData[dateStr].events.push({ time: '11:20 - 13:10', title: '돌봄 수업 (점심 해결 필요)' });
                     scheduleData[dateStr].events.push({ time: '13:10 - 14:10', title: '태권도 (1부)' });
                     scheduleData[dateStr].events.push({ time: '14:10', title: '데시앙 도착' });
                 });
 
-                // Layer 4: Override with TKD Vacation (7/31, 8/1, 8/4)
-                const tkdVacation = ['2025-07-31', '2025-08-01', '2025-08-04'];
+                // Layer 4: Override with TKD Vacation (7/31, 8/1)
+                const tkdVacation = ['2025-07-31', '2025-08-01'];
                 tkdVacation.forEach(dateStr => {
                     scheduleData[dateStr].events = scheduleData[dateStr].events.filter(
                         e => e.title === '아빠와 함께 출발' || e.title === '초등 보충수업'
@@ -190,8 +202,22 @@
                     scheduleData[dateStr].notes.push({ text: '11:20 하교 시 직접 픽업 필요', type: 'critical' });
                     scheduleData[dateStr].tags.push('has-critical-alert');
                 });
+                
+                // Layer 5: Special Case for Aug 4th
+                const aug4Str = '2025-08-04';
+                if (scheduleData[aug4Str]) {
+                    scheduleData[aug4Str].events = scheduleData[aug4Str].events.filter(
+                        e => e.title === '아빠와 함께 출발' || e.title === '초등 보충수업'
+                    );
+                    scheduleData[aug4Str].events.push({ time: '11:20 - 15:00', title: '돌봄 수업 (점심 제공됨)' });
+                    scheduleData[aug4Str].events.push({ time: '15:00', title: '데시앙 도착 (픽업)'});
+                    scheduleData[aug4Str].notes = [];
+                    scheduleData[aug4Str].tags = [];
+                    scheduleData[aug4Str].notes.push({ text: '15:00 하교 시 직접 픽업 필요', type: 'critical' });
+                    scheduleData[aug4Str].tags.push('has-critical-alert');
+                }
 
-                // Layer 5: Final Cleanup
+                // Layer 6: Final Cleanup
                 Object.values(scheduleData).forEach(dayData => {
                     dayData.events.sort((a, b) => a.time.localeCompare(b.time));
                 });
@@ -205,7 +231,8 @@
                 const keyEvents = [
                     { date: new Date(2025, 6, 31), id: 'key-info-pickup' },
                     { date: new Date(2025, 6, 28), id: 'key-info-arrival1' },
-                    { date: new Date(2025, 7, 5), id: 'key-info-arrival2' } 
+                    { date: new Date(2025, 7, 5), id: 'key-info-arrival2' },
+                    { date: new Date(2025, 7, 4), id: 'key-info-pickup-aug4' }
                 ];
 
                 const upcomingEvents = keyEvents.map(event => {
@@ -216,20 +243,27 @@
 
                 if (upcomingEvents.length > 0) {
                     upcomingEvents.sort((a, b) => a.daysRemaining - b.daysRemaining);
-                    const nextEvent = upcomingEvents[0];
                     
-                    const nextEventElement = document.getElementById(nextEvent.id);
-                    if (nextEventElement) {
-                        const parentContainer = document.getElementById('key-info-grid');
-                        parentContainer.prepend(nextEventElement);
+                    const parentContainer = document.getElementById('key-info-grid');
+                    
+                    upcomingEvents.forEach((event, index) => {
+                        const eventElement = document.getElementById(event.id);
+                        if (eventElement) {
+                            parentContainer.appendChild(eventElement);
 
-                        nextEventElement.classList.add('highlight-next');
-                        
-                        const dDayBadge = document.createElement('div');
-                        dDayBadge.className = 'absolute -top-3 -right-3 bg-blue-500 text-white text-lg font-bold w-16 h-16 rounded-full flex items-center justify-center shadow-lg';
-                        dDayBadge.textContent = `D-${nextEvent.daysRemaining}`;
-                        nextEventElement.appendChild(dDayBadge);
-                    }
+                            if (index === 0) {
+                                eventElement.classList.add('highlight-next');
+                                const dDayBadge = document.createElement('div');
+                                dDayBadge.className = 'absolute -top-3 -right-3 bg-blue-500 text-white text-lg font-bold w-16 h-16 rounded-full flex items-center justify-center shadow-lg';
+                                let dDayText = `D-${event.daysRemaining}`;
+                                if (event.daysRemaining === 0) {
+                                    dDayText = 'D-DAY';
+                                }
+                                dDayBadge.textContent = dDayText;
+                                eventElement.appendChild(dDayBadge);
+                            }
+                        }
+                    });
                 }
             }
 
