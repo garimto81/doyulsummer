@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>도율이 여름방학 일정</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Calm Neutrals -->
+    <!-- Application Structure Plan: The application is designed as an interactive single-page dashboard. The core is a dynamic calendar allowing users to see the entire vacation period at a glance, with color-coding for different types of days. Clicking a date updates a "Daily Detail" panel, showing a chronological timeline and critical action items for that specific day. The "Weekly Forecast" section now shows the next 7 *scheduled* days, not just the next 7 chronological days, to provide a more focused, actionable view for the user. The top "Key Info" section is redesigned to make the times the most prominent visual element and dynamically calculates and highlights the next upcoming key event with a "D-Day" counter. A current date display has also been added. -->
+    <!-- Visualization & Content Choices: Instead of traditional charts, the primary visualization is an interactive calendar grid (HTML/CSS/JS) and a dynamic daily timeline (HTML/JS). Report Info: Entire schedule -> Goal: Organize/Inform -> Viz: Interactive Calendar -> Interaction: Click to see daily details -> Justification: Best for time-based data exploration. Report Info: Critical tasks (pickup/arrival times) -> Goal: Alert/Summarize -> Viz: Prominent summary boxes with large typography for times and a dynamic "D-Day" badge -> Interaction: Static display, dynamically updated on load -> Justification: Emphasizes the most critical data points (times) and provides a clear countdown to the next important action. Report Info: Overlapping schedules -> Goal: Clarify -> Viz: Resolved into a single chronological timeline for each day -> Interaction: Displayed upon day selection -> Justification: Simplifies complex overlapping rules into a clear, easy-to-understand daily plan. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f8fafc;
+        }
+        .calendar-grid {
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+        }
+        .day {
+            min-height: 100px;
+        }
+        .day.has-event {
+            background-color: #e0f2fe;
+            cursor: pointer;
+        }
+        .day.has-alert {
+            background-color: #fef9c3;
+            cursor: pointer;
+        }
+        .day.has-critical-alert {
+            background-color: #ffe4e6;
+            cursor: pointer;
+            font-weight: 700;
+        }
+        .day.selected {
+            box-shadow: 0 0 0 3px #38bdf8;
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        .highlight-next {
+            position: relative;
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 2px solid #0ea5e9;
+        }
+        @media (max-width: 640px) {
+            .day {
+                min-height: 80px;
+                padding: 0.25rem;
+                font-size: 0.75rem;
+            }
+            .day span {
+                font-weight: 500;
+            }
+            h1 { font-size: 1.875rem; }
+            h2 { font-size: 1.25rem; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 p-4 sm:p-6 lg:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-slate-900">☀️ 도율이 여름방학 일정</h1>
+            <p id="current-date" class="text-slate-600 mt-2 text-lg"></p>
+        </header>
+
+        <main class="space-y-8">
+            <section id="key-info" class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                <h2 class="text-2xl font-bold text-slate-800 mb-4 border-b pb-2">📌 핵심 정보 요약</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                    <div id="key-info-pickup" class="bg-rose-100 p-6 rounded-lg flex flex-col justify-center items-center transition-transform duration-300">
+                        <p class="text-4xl font-bold text-rose-900">11:20</p>
+                        <h3 class="font-semibold text-rose-800 mt-2">학교 직접 픽업</h3>
+                        <p class="text-md text-rose-900 mt-1">7/31, 8/1, 8/4</p>
+                    </div>
+                    <div id="key-info-arrival1" class="bg-amber-100 p-6 rounded-lg flex flex-col justify-center items-center transition-transform duration-300">
+                        <p class="text-4xl font-bold text-amber-900">14:10</p>
+                        <h3 class="font-semibold text-amber-800 mt-2">데시앙 도착</h3>
+                        <p class="text-md text-amber-900 mt-1">7/28 ~ 7/30</p>
+                    </div>
+                    <div id="key-info-arrival2" class="bg-sky-100 p-6 rounded-lg flex flex-col justify-center items-center transition-transform duration-300">
+                        <p class="text-4xl font-bold text-sky-900">16:30</p>
+                        <h3 class="font-semibold text-sky-800 mt-2">데시앙 도착</h3>
+                        <p class="text-md text-sky-900 mt-1">그 외 평일</p>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="weekly-forecast" class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                <h2 class="text-2xl font-bold text-slate-800 mb-4 border-b pb-2">📅 주요 일정 7일 미리보기</h2>
+                <div id="weekly-forecast-content" class="space-y-4">
+                    <p class="text-slate-500">일정을 불러오는 중입니다...</p>
+                </div>
+            </section>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <section id="calendar-view" class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-4">📅 전체 일정 달력</h2>
+                    <p class="text-slate-600 mb-6">날짜를 클릭하여 상세 일과를 확인하세요. 색상으로 주요 활동을 구분했습니다.</p>
+                    <div id="calendar-container" class="space-y-8"></div>
+                </section>
+
+                <section id="daily-detail" class="lg:col-span-1 bg-white p-6 rounded-2xl shadow-md border border-slate-200 h-fit sticky top-8">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-4">🗓️ 선택한 날의 일과</h2>
+                    <div id="daily-detail-content">
+                        <p class="text-slate-500">달력에서 날짜를 선택해주세요.</p>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const scheduleData = {};
+            const vacationStart = new Date(2025, 6, 24); // Month is 0-indexed (6 = July)
+            const vacationEnd = new Date(2025, 7, 19);
+            const today = new Date(2025, 6, 15); // KST 기준 오늘 날짜 설정
+
+            function formatDate(date) {
+                const year = date.getFullYear();
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            
+            function generateScheduleData() {
+                for (let d = new Date(vacationStart); d <= vacationEnd; d.setDate(d.getDate() + 1)) {
+                    const dateStr = formatDate(new Date(d));
+                    const day = d.getDay(); 
+                    
+                    scheduleData[dateStr] = {
+                        date: dateStr,
+                        dayOfWeek: ['일', '월', '화', '수', '목', '금', '토'][day],
+                        events: [],
+                        notes: [],
+                        tags: []
+                    };
+                }
+
+                const supplementaryStart = new Date(2025, 6, 28);
+                const supplementaryEnd = new Date(2025, 7, 8);
+                for (let d = new Date(supplementaryStart); d <= supplementaryEnd; d.setDate(d.getDate() + 1)) {
+                    const dateStr = formatDate(new Date(d));
+                    if (scheduleData[dateStr]) {
+                        scheduleData[dateStr].events.push({ time: '09:00 - 11:20', title: '초등 보충수업'});
+                        scheduleData[dateStr].notes.push({ text: '점심 제공 X (도시락 필요)', type: 'alert' });
+                        scheduleData[dateStr].tags.push('has-alert');
+                    }
+                }
+                
+                const tkdVacation = ['2025-07-31', '2025-08-01', '2025-08-04'];
+                tkdVacation.forEach(dateStr => {
+                    if (scheduleData[dateStr]) {
+                        scheduleData[dateStr].notes.push({ text: '11:20 하교 시 직접 픽업 필요', type: 'critical' });
+                        scheduleData[dateStr].events.push({ time: '오후', title: '태권도 방학' });
+                        scheduleData[dateStr].tags.push('has-critical-alert');
+                    }
+                });
+
+                const tkdSchedule1 = ['2025-07-28', '2025-07-29', '2025-07-30'];
+                tkdSchedule1.forEach(dateStr => {
+                    if (scheduleData[dateStr]) {
+                        scheduleData[dateStr].events.push({ time: '11:20 - 13:10', title: '점심시간 (해결 필요)'});
+                        scheduleData[dateStr].events.push({ time: '13:10 - 14:10', title: '태권도 (1부)'});
+                        scheduleData[dateStr].events.push({ time: '14:10', title: '데시앙 도착'});
+                    }
+                });
+                
+                const tkdSchedule2Start = new Date(2025, 7, 5);
+                const tkdSchedule2End = new Date(2025, 7, 8);
+                for (let d = new Date(tkdSchedule2Start); d <= tkdSchedule2End; d.setDate(d.getDate() + 1)) {
+                    const dateStr = formatDate(new Date(d));
+                     if (scheduleData[dateStr]) {
+                        scheduleData[dateStr].events.push({ time: '11:20 - 15:30', title: '점심 및 공백 시간'});
+                        scheduleData[dateStr].events.push({ time: '15:30 - 16:30', title: '태권도 (2부)'});
+                        scheduleData[dateStr].events.push({ time: '16:30', title: '데시앙 도착'});
+                     }
+                }
+                
+                for (let d = new Date(vacationStart); d <= vacationEnd; d.setDate(d.getDate() + 1)) {
+                    const dateStr = formatDate(new Date(d));
+                    const day = new Date(d).getDay();
+                    if (day > 0 && day < 6) { 
+                       if (scheduleData[dateStr] && scheduleData[dateStr].events.length === 0) {
+                            scheduleData[dateStr].events.push({ time: '15:30 - 16:30', title: '태권도 (2부)' });
+                            scheduleData[dateStr].events.push({ time: '16:30', title: '데시앙 도착' });
+                            scheduleData[dateStr].tags.push('has-event');
+                       }
+                    }
+                }
+
+                Object.values(scheduleData).forEach(dayData => {
+                    if (dayData.events.length > 0 && !dayData.events.some(e => e.title.includes('출발'))) {
+                         dayData.events.unshift({ time: '07:40', title: '아빠와 함께 출발' });
+                    }
+                    dayData.events.sort((a, b) => a.time.localeCompare(b.time));
+                });
+
+                if (scheduleData['2025-07-24']) {
+                    scheduleData['2025-07-24'].events = [];
+                    scheduleData['2025-07-24'].notes = [];
+                    scheduleData['2025-07-24'].tags = [];
+                }
+            }
+
+            function updateKeyInfoAndDate() {
+                const dateElement = document.getElementById('current-date');
+                const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+                dateElement.textContent = `오늘: ${today.toLocaleDateString('ko-KR', options)}`;
+
+                const keyEvents = [
+                    { date: new Date(2025, 6, 31), id: 'key-info-pickup' },
+                    { date: new Date(2025, 6, 28), id: 'key-info-arrival1' },
+                    { date: new Date(2025, 7, 5), id: 'key-info-arrival2' } 
+                ];
+
+                const upcomingEvents = keyEvents.map(event => {
+                    const timeDiff = event.date.getTime() - today.getTime();
+                    const daysRemaining = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                    return { ...event, daysRemaining };
+                }).filter(event => event.daysRemaining >= 0);
+
+                if (upcomingEvents.length > 0) {
+                    upcomingEvents.sort((a, b) => a.daysRemaining - b.daysRemaining);
+                    const nextEvent = upcomingEvents[0];
+                    
+                    const nextEventElement = document.getElementById(nextEvent.id);
+                    if (nextEventElement) {
+                        nextEventElement.classList.add('highlight-next');
+                        
+                        const dDayBadge = document.createElement('div');
+                        dDayBadge.className = 'absolute -top-3 -right-3 bg-blue-500 text-white text-lg font-bold w-16 h-16 rounded-full flex items-center justify-center shadow-lg';
+                        dDayBadge.textContent = `D-${nextEvent.daysRemaining}`;
+                        nextEventElement.appendChild(dDayBadge);
+                    }
+                }
+            }
+
+            function renderCalendar() {
+                const container = document.getElementById('calendar-container');
+                container.innerHTML = '';
+                const monthsToRender = [6, 7]; // July, August
+
+                monthsToRender.forEach(monthIndex => {
+                    const date = new Date(2025, monthIndex, 1);
+                    const monthName = date.toLocaleString('ko-KR', { month: 'long' });
+
+                    const monthWrapper = document.createElement('div');
+                    monthWrapper.innerHTML = `
+                        <h3 class="text-xl font-bold text-center mb-4">${monthName}</h3>
+                        <div class="calendar-grid grid gap-1">
+                            <div class="font-bold text-center text-red-600">일</div><div class="font-bold text-center">월</div><div class="font-bold text-center">화</div><div class="font-bold text-center">수</div><div class="font-bold text-center">목</div><div class="font-bold text-center">금</div><div class="font-bold text-center text-blue-600">토</div>
+                        </div>
+                    `;
+                    const grid = monthWrapper.querySelector('.calendar-grid');
+                    const firstDay = new Date(2025, monthIndex, 1).getDay();
+                    for (let i = 0; i < firstDay; i++) {
+                        grid.innerHTML += `<div class="p-2 border rounded-md bg-slate-50"></div>`;
+                    }
+
+                    while (date.getMonth() === monthIndex) {
+                        const dayCell = document.createElement('div');
+                        const dateStr = formatDate(new Date(date));
+                        const data = scheduleData[dateStr];
+                        
+                        dayCell.classList.add('day', 'p-2', 'border', 'rounded-md', 'transition-all', 'duration-200', 'relative');
+                        dayCell.innerHTML = `<span class="text-sm font-semibold">${date.getDate()}</span>`;
+                        
+                        if (dateStr === formatDate(today)) {
+                            dayCell.classList.add('bg-blue-200');
+                            dayCell.innerHTML += `<span class="absolute top-1 left-1 text-xs font-bold text-blue-800">오늘</span>`;
+                        }
+
+                        if (data) {
+                            dayCell.dataset.date = dateStr;
+                            const tagClasses = [...new Set(data.tags)].join(' ');
+                            if (tagClasses) dayCell.classList.add(...tagClasses.split(' '));
+
+                            const indicators = document.createElement('div');
+                            indicators.className = 'absolute bottom-1 right-1 flex space-x-1';
+                            if (data.notes.some(n => n.type === 'alert')) indicators.innerHTML += '<div class="w-2 h-2 rounded-full bg-amber-500" title="점심 필요"></div>';
+                            if (data.notes.some(n => n.type === 'critical')) indicators.innerHTML += '<div class="w-2 h-2 rounded-full bg-rose-600" title="픽업 필요"></div>';
+                            dayCell.appendChild(indicators);
+                        } else {
+                             dayCell.classList.add('bg-slate-100', 'text-slate-400');
+                        }
+                        grid.appendChild(dayCell);
+                        date.setDate(date.getDate() + 1);
+                    }
+                    container.appendChild(monthWrapper);
+                });
+
+                container.addEventListener('click', e => {
+                    const dayCell = e.target.closest('.day');
+                    if (dayCell && dayCell.dataset.date) {
+                        const date = dayCell.dataset.date;
+                        renderDailyDetail(date);
+                        document.querySelectorAll('.day.selected').forEach(d => d.classList.remove('selected'));
+                        dayCell.classList.add('selected');
+                    }
+                });
+            }
+
+            function renderDailyDetail(dateStr) {
+                const contentDiv = document.getElementById('daily-detail-content');
+                const data = scheduleData[dateStr];
+                if (!data) {
+                    contentDiv.innerHTML = '<p class="text-slate-500">선택한 날짜에 대한 정보가 없습니다.</p>';
+                    return;
+                }
+
+                let html = `
+                    <h3 class="text-xl font-bold mb-1">${new Date(dateStr + 'T00:00:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} (${data.dayOfWeek})</h3>
+                    <hr class="my-4">
+                `;
+
+                if (data.notes.length > 0) {
+                    html += '<div class="space-y-2 mb-4">';
+                    data.notes.forEach(note => {
+                        const noteColor = note.type === 'critical' ? 'rose' : 'amber';
+                        html += `<div class="p-3 rounded-lg bg-${noteColor}-100 border-l-4 border-${noteColor}-500">
+                                    <p class="font-bold text-${noteColor}-800">${note.type === 'critical' ? '🔴' : '🟡'} ${note.text}</p>
+                                 </div>`;
+                    });
+                    html += '</div>';
+                }
+
+                if (data.events.length > 0) {
+                    html += '<div class="space-y-3">';
+                     data.events.forEach(event => {
+                        html += `
+                            <div class="flex items-start space-x-3">
+                                <div class="w-20 text-right font-semibold text-slate-600">${event.time}</div>
+                                <div class="flex-1 border-l-2 border-slate-300 pl-4 pb-2">
+                                   <p class="font-medium text-slate-800">${event.title}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                } else {
+                    html += '<p class="text-slate-500">특별한 일정이 없습니다.</p>';
+                }
+
+                contentDiv.innerHTML = html;
+            }
+
+            function renderWeeklyForecast() {
+                const container = document.getElementById('weekly-forecast-content');
+                container.innerHTML = '';
+                
+                let daysFound = 0;
+                let currentDate = new Date(today);
+
+                while (daysFound < 7 && currentDate <= vacationEnd) {
+                    const dateStr = formatDate(currentDate);
+                    const data = scheduleData[dateStr];
+
+                    if (data && (data.events.length > 0 || data.notes.length > 0)) {
+                        const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][currentDate.getDay()];
+                        const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
+                        const isToday = formatDate(currentDate) === formatDate(today);
+                        
+                        let dayHtml = `
+                        <div class="p-4 rounded-lg border flex flex-col sm:flex-row gap-4 ${isToday ? 'bg-sky-50 border-sky-200' : 'bg-white'}">
+                            <div class="flex-shrink-0 w-full sm:w-28 text-center">
+                                <p class="font-bold text-lg ${isWeekend ? 'text-red-500' : 'text-slate-800'}">${currentDate.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}</p>
+                                <p class="text-sm ${isWeekend ? 'text-red-500' : 'text-slate-500'}">${dayOfWeek}요일 ${isToday ? '<span class="font-bold text-sky-600">(오늘)</span>' : ''}</p>
+                            </div>
+                            <div class="flex-grow border-t sm:border-t-0 sm:border-l border-slate-200 pt-4 sm:pt-0 sm:pl-4">`;
+
+                        if (data.notes.length > 0 || data.events.length > 0) {
+                            dayHtml += `<ul class="space-y-2">`;
+                            data.notes.forEach(note => {
+                                const noteColor = note.type === 'critical' ? 'rose' : 'amber';
+                                dayHtml += `<li class="flex items-start gap-2 text-sm font-semibold text-${noteColor}-700">
+                                                <span class="mt-1">${note.type === 'critical' ? '🔴' : '🟡'}</span>
+                                                <span>${note.text}</span>
+                                            </li>`;
+                            });
+                            data.events.forEach(event => {
+                                dayHtml += `<li class="flex items-start gap-2 text-sm text-slate-700">
+                                                <span class="font-medium text-slate-500 w-20 text-right flex-shrink-0">${event.time}</span>
+                                                <span>${event.title}</span>
+                                            </li>`;
+                            });
+                            dayHtml += `</ul>`;
+                        } else {
+                            dayHtml += `<p class="text-slate-500 h-full flex items-center">특별한 일정이 없습니다.</p>`;
+                        }
+                        
+                        dayHtml += `</div></div>`;
+                        container.innerHTML += dayHtml;
+                        daysFound++;
+                    }
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+
+                if (daysFound === 0) {
+                    container.innerHTML = '<p class="text-slate-500">향후 예정된 일정이 없습니다.</p>';
+                }
+            }
+
+            generateScheduleData();
+            updateKeyInfoAndDate();
+            renderCalendar();
+            renderWeeklyForecast();
+
+            const todayStr = formatDate(today);
+            if (scheduleData[todayStr]) {
+                renderDailyDetail(todayStr);
+                 const todayCell = document.querySelector(`.day[data-date="${todayStr}"]`);
+                 if(todayCell) todayCell.classList.add('selected');
+            } else {
+                 renderDailyDetail(formatDate(vacationStart));
+                 const startCell = document.querySelector(`.day[data-date="${formatDate(vacationStart)}"]`);
+                 if(startCell) startCell.classList.add('selected');
+            }
+        });
+    </script>
+</body>
+</html>
