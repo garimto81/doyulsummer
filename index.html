@@ -6,7 +6,7 @@
     <title>도율이 여름방학 일정</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chosen Palette: Calm Neutrals -->
-    <!-- Application Structure Plan: The application is designed as an interactive single-page dashboard. The core is a dynamic calendar allowing users to see the entire vacation period at a glance, with color-coding for different types of days. Clicking a date updates a "Daily Detail" panel, showing a chronological timeline and critical action items for that specific day. The "Weekly Forecast" section now shows the next 7 *scheduled* days, not just the next 7 chronological days, to provide a more focused, actionable view for the user. The top "Key Info" section is redesigned to make the times the most prominent visual element and dynamically reorders itself to place the next upcoming event first, with a "D-Day" counter. A current date display has also been added. -->
+    <!-- Application Structure Plan: The application is designed as an interactive single-page dashboard. The core is a dynamic calendar allowing users to see the entire vacation period at a glance, with color-coding for different types of days. Clicking a date updates a "Daily Detail" panel, showing a chronological timeline and critical action items for that specific day. The "Weekly Forecast" section now shows the next 7 *scheduled* days, not just the next 7 chronological days, to provide a more focused, actionable view for the user. The top "Key Info" section is redesigned to make the times the most prominent visual element and dynamically reorders itself to place the next upcoming event first, with a "D-Day" counter. A current date display has also been added. All weekend schedules are now programmatically removed. Lunch box reminders are now omitted on direct pickup days. -->
     <!-- Visualization & Content Choices: Instead of traditional charts, the primary visualization is an interactive calendar grid (HTML/CSS/JS) and a dynamic daily timeline (HTML/JS). Report Info: Entire schedule -> Goal: Organize/Inform -> Viz: Interactive Calendar -> Interaction: Click to see daily details -> Justification: Best for time-based data exploration. Report Info: Critical tasks (pickup/arrival times) -> Goal: Alert/Summarize -> Viz: Prominent summary boxes with large typography for times and a dynamic "D-Day" badge, now reordered for prominence -> Interaction: Static display, dynamically updated and reordered on load -> Justification: Emphasizes the most critical data points (times) and provides a clear countdown to the next important action, placing it first for immediate attention. Report Info: Overlapping schedules -> Goal: Clarify -> Viz: Resolved into a single chronological timeline for each day -> Interaction: Displayed upon day selection -> Justification: Simplifies complex overlapping rules into a clear, easy-to-understand daily plan. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
@@ -141,18 +141,22 @@
                     };
                 }
 
+                const tkdVacation = ['2025-07-31', '2025-08-01', '2025-08-04'];
                 const supplementaryStart = new Date(2025, 6, 28);
                 const supplementaryEnd = new Date(2025, 7, 8);
+
                 for (let d = new Date(supplementaryStart); d <= supplementaryEnd; d.setDate(d.getDate() + 1)) {
                     const dateStr = formatDate(new Date(d));
                     if (scheduleData[dateStr]) {
                         scheduleData[dateStr].events.push({ time: '09:00 - 11:20', title: '초등 보충수업'});
-                        scheduleData[dateStr].notes.push({ text: '점심 제공 X (도시락 필요)', type: 'alert' });
-                        scheduleData[dateStr].tags.push('has-alert');
+                        // 직접 픽업하는 날이 아니면 도시락 정보 추가
+                        if (!tkdVacation.includes(dateStr)) {
+                            scheduleData[dateStr].notes.push({ text: '점심 제공 X (도시락 필요)', type: 'alert' });
+                            scheduleData[dateStr].tags.push('has-alert');
+                        }
                     }
                 }
                 
-                const tkdVacation = ['2025-07-31', '2025-08-01', '2025-08-04'];
                 tkdVacation.forEach(dateStr => {
                     if (scheduleData[dateStr]) {
                         scheduleData[dateStr].notes.push({ text: '11:20 하교 시 직접 픽업 필요', type: 'critical' });
@@ -204,6 +208,16 @@
                     scheduleData['2025-07-24'].events = [];
                     scheduleData['2025-07-24'].notes = [];
                     scheduleData['2025-07-24'].tags = [];
+                }
+
+                // 주말 일정 삭제
+                for (const dateStr in scheduleData) {
+                    const dayOfWeek = new Date(dateStr + 'T00:00:00').getDay();
+                    if (dayOfWeek === 0 || dayOfWeek === 6) { // Sunday or Saturday
+                        scheduleData[dateStr].events = [];
+                        scheduleData[dateStr].notes = [];
+                        scheduleData[dateStr].tags = [];
+                    }
                 }
             }
 
